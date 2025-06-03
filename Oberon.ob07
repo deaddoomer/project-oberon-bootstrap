@@ -1,0 +1,50 @@
+MODULE Oberon; (*stub*)
+
+  IMPORT Texts, Args, Out;
+
+  VAR
+    Log*: Texts.Text;
+    Par*: RECORD
+      text*: Texts.Text;
+      pos*: INTEGER
+    END;
+    pos: INTEGER;
+
+  PROCEDURE GetSelection* (VAR text: Texts.Text; VAR beg, end, time: INTEGER);
+  BEGIN time := -1
+  END GetSelection;
+
+  PROCEDURE Collect* (count: INTEGER);
+  END Collect;
+
+  PROCEDURE Notify (T: Texts.Text; op, beg, end: INTEGER);
+    VAR R: Texts.Reader; ch: CHAR;
+  BEGIN
+    ASSERT(op # Texts.delete); (*append only*)
+    IF op = Texts.insert THEN
+      ASSERT(beg = pos); (*append only*)
+      Texts.OpenReader(R, T, pos);
+      Texts.Read(R, ch);
+      WHILE ~R.eot DO
+        IF ch = 0DX THEN Out.Ln ELSE Out.Char(ch) END;
+        Texts.Read(R, ch)
+      END;
+      pos := T.len
+    END
+  END Notify;
+
+  PROCEDURE Init;
+    VAR T: Texts.Text; W: Texts.Writer; i: INTEGER; arg: ARRAY 256 OF CHAR;
+  BEGIN
+    NEW(T); T.notify := Notify; Texts.Open(T, ""); pos := T.len; Log := T;
+    NEW(T); Texts.Open(T, ""); Texts.OpenWriter(W);
+    FOR i := 1 TO Args.argc - 1 DO
+      Args.GetArg(i, arg); Texts.WriteString(W, arg); Texts.Write(W, " ")
+    END;
+    Texts.Append(T, W.buf);
+    Par.text := T; Par.pos := 0
+  END Init;
+
+BEGIN
+  Init
+END Oberon.

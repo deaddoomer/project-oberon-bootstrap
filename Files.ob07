@@ -1,0 +1,403 @@
+MODULE Files;
+
+  IMPORT SYSTEM, HostFiles := File;
+
+  CONST
+    FullLength = 256;
+
+$IF (KOLIBRIOS)
+    (*invalid = NIL;*)
+$ELSIF (WINDOWS)
+    invalid = -1;
+$ELSIF (LINUX)
+    invalid = 0;
+$END
+
+  TYPE
+    File* = POINTER TO FileDesc;
+    FullName = ARRAY FullLength OF CHAR;
+
+    Rider* = RECORD
+      eof*: BOOLEAN;
+      base: File;
+      pos: INTEGER
+    END;
+
+$IF (KOLIBRIOS)
+    Handle = HostFiles.FS;
+$ELSIF (WINDOWS | LINUX)
+    Handle = INTEGER;
+$END
+
+    FileDesc = RECORD
+      next: File;
+      h: Handle;
+      registered: BOOLEAN;
+      temp: FullName;
+      name: FullName
+    END;
+
+  VAR
+    root: File;
+    count: INTEGER;
+$IF (KOLIBRIOS)
+    invalid: Handle;
+$END
+
+  PROCEDURE Decimal (VAR s: ARRAY OF CHAR; x: INTEGER);
+    VAR i, j, x0: INTEGER; a: ARRAY 12 OF CHAR;
+  BEGIN
+    IF ROR(x, 31) = 1 THEN a := "8463847412-"; i := 12
+    ELSE i := 0;
+      IF x < 0 THEN x0 := -x ELSE x0 := x END;
+      REPEAT
+        a[i] := CHR(x0 MOD 10 + 30H); x0 := x0 DIV 10; INC(i)
+      UNTIL x0 = 0;
+      IF x < 0 THEN a[i] := "-"; INC(i) END
+    END;
+    j := 0; REPEAT DEC(i); s[j] := a[i]; INC(j) UNTIL i = 0; s[j] := 0X
+  END Decimal;
+
+  PROCEDURE MakeFileName (VAR name: ARRAY OF CHAR; a, b: ARRAY OF CHAR; VAR res: INTEGER);
+    VAR i, j: INTEGER; ch: CHAR;
+  BEGIN i := 0; res := 4; ch := a[0]; j := 1;
+    WHILE (ch # 0X) & (i < LEN(name)) DO name[i] := ch; ch := a[j]; INC(i); INC(j) END;
+    IF i < LEN(name) THEN
+      j := 0; REPEAT ch := b[j]; name[i] := ch; INC(i); INC(j) UNTIL (ch = 0X) OR (i >= LEN(name));
+      IF ch = 0X THEN res := 0 END
+    END
+  END MakeFileName;
+
+  PROCEDURE CloseFile(f: File);
+  BEGIN
+    IF (f # NIL) & (f.h # invalid) THEN
+      HostFiles.Close(f.h); f.h := invalid
+    END
+  END CloseFile;
+
+  PROCEDURE ReopenFile(f: File);
+    VAR h: Handle;
+  BEGIN
+    IF (f # NIL) & (f.h = invalid) THEN
+$IF (KOLIBRIOS)
+      IF f.temp[0] # 0X THEN
+        h := HostFiles.Open(f.temp)
+      ELSIF f.name[0] # 0X THEN
+        h := HostFiles.Open(f.name)
+      ELSE
+        h := invalid
+      END;
+$ELSE
+      IF f.temp[0] # 0X THEN
+        h := HostFiles.Open(f.temp, HostFiles.OPEN_RW)
+      ELSIF f.name[0] # 0X THEN
+        h := HostFiles.Open(f.name, HostFiles.OPEN_RW)
+      ELSE
+        h := invalid
+      END;
+$END
+      ASSERT(h # invalid);
+      f.h := h
+    END
+  END ReopenFile;
+
+  PROCEDURE Old*(name: ARRAY OF CHAR): File;
+    VAR f: File; h: Handle;
+  BEGIN
+    f := NIL;
+    IF name[0] # 0X THEN
+      f := root; WHILE (f # NIL) & (~f.registered OR (f.name # name)) DO f := f.next END;
+      IF f = NIL THEN
+$IF (KOLIBRIOS)
+        h := HostFiles.Open(name);
+$ELSE
+        h := HostFiles.Open(name, HostFiles.OPEN_RW);
+$END
+        IF h # invalid THEN
+          NEW(f); f.h := h; f.registered := TRUE; f.temp := ""; f.name := name;
+          f.next := root; root := f
+        END
+      END
+    END;
+    RETURN f
+  END Old;
+
+  PROCEDURE New*(name: ARRAY OF CHAR): File;
+    VAR f: File; h: Handle; temp: FullName; res: INTEGER;
+  BEGIN
+    f := NIL;
+$IF (LINUX)
+    REPEAT
+      Decimal(temp, count);
+      MakeFileName(temp, temp, ".TMP", res);
+      h := HostFiles.Open(temp, HostFiles.OPEN_RW);
+      IF h # invalid THEN HostFiles.Close(h) END;
+      INC(count)
+    UNTIL h = invalid;
+$ELSE
+    REPEAT
+      Decimal(temp, count);
+      MakeFileName(temp, temp, ".TMP", res);
+      INC(count)
+    UNTIL HostFiles.Exists(temp) = FALSE;
+$END
+    h := HostFiles.Create(temp);
+    IF h # invalid THEN
+      NEW(f); f.h := h; f.registered := FALSE; f.temp := temp; f.name := name;
+      f.next := root; root := f
+    END;
+    RETURN f
+  END New;
+
+  PROCEDURE Register*(f: File);
+    CONST BufLength = 512;
+    VAR p: File; hr, hw: Handle; r, w, len, i, j: INTEGER; ok: BOOLEAN; buf: ARRAY BufLength OF BYTE;
+  BEGIN
+    IF (f # NIL) & (f.name[0] # 0X) & ~f.registered THEN
+      ReopenFile(f);
+      hr := f.h;
+      hw := HostFiles.Create(f.name);
+      IF hw = invalid THEN
+        p := root; WHILE (p # NIL) & (~f.registered OR (p.h = invalid) OR (p.name # f.name)) DO p := p.next END;
+        IF p # NIL THEN
+          CloseFile(p);
+          hw := HostFiles.Create(f.name)
+        END
+      END;
+      ASSERT(hw # invalid);
+      ASSERT(hr # invalid);
+      len := HostFiles.Seek(hr, 0, HostFiles.SEEK_END);
+      ASSERT(len >= 0);
+      r := HostFiles.Seek(hr, 0, HostFiles.SEEK_BEG);
+      ASSERT(r = 0);
+      WHILE len > 0 DO
+        IF len >= BufLength THEN i := BufLength ELSE i := len MOD BufLength END;
+        j := 0; REPEAT r := HostFiles.Read(hr, SYSTEM.ADR(buf[j]), i); ASSERT(r # 0); INC(j, r); DEC(i, r) UNTIL i = 0;
+        i := 0; REPEAT w := HostFiles.Write(hw, SYSTEM.ADR(buf[i]), j); ASSERT(w # 0); INC(i, w); DEC(j, w) UNTIL j = 0;
+        DEC(len, i)
+      END;
+      HostFiles.Close(hw); HostFiles.Close(hr);
+      f.h := invalid; f.registered := TRUE;
+      ok := HostFiles.Delete(f.temp);
+      f.temp := ""
+    END
+  END Register;
+
+  PROCEDURE Close*(f: File);
+  BEGIN CloseFile(f)
+  END Close;
+
+(*
+  PROCEDURE Purge*(f: File);
+  END Purge;
+
+  PROCEDURE Delete*(name: ARRAY OF CHAR; VAR res: INTEGER);
+  BEGIN res := -1
+  END Delete;
+
+  PROCEDURE Rename*(old, new: ARRAY OF CHAR; VAR res: INTEGER);
+  BEGIN res := -1
+  END Rename;
+*)
+
+  PROCEDURE Length*(f: File): INTEGER;
+    VAR len: INTEGER;
+  BEGIN
+    ReopenFile(f);
+    len := HostFiles.Seek(f.h, 0, HostFiles.SEEK_END);
+    ASSERT(len >= 0);
+    RETURN len
+  END Length;
+
+(*
+  PROCEDURE Date*(f: File): INTEGER;
+  BEGIN RETURN 0
+  END Date;
+*)
+
+  PROCEDURE Set*(VAR r: Rider; f: File; pos: INTEGER);
+    VAR len: INTEGER;
+  BEGIN
+    IF f # NIL THEN
+      IF pos < 0 THEN pos := 0 ELSE
+        len := Length(f); IF pos > len THEN pos := len END
+      END;
+      r.base := f; r.pos := pos
+    ELSE r.base := NIL
+    END;
+  END Set;
+
+  PROCEDURE Pos*(VAR r: Rider): INTEGER;
+  BEGIN RETURN r.pos
+  END Pos;
+
+  PROCEDURE Base*(VAR r: Rider): File;
+  BEGIN RETURN r.base
+  END Base;
+
+  PROCEDURE ReadByte*(VAR r: Rider; VAR x: BYTE);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    ReopenFile(r.base);
+    res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+    ASSERT(res >= 0);
+    x := 0; res := HostFiles.Read(r.base.h, SYSTEM.ADR(x), 1);
+    ASSERT((res = 0) OR (res = 1));
+    INC(r.pos, res);
+    r.eof := res < 1;
+  END ReadByte;
+
+  PROCEDURE ReadBytes*(VAR r: Rider; VAR x: ARRAY OF BYTE; n: INTEGER);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    IF n > 0 THEN
+      ReopenFile(r.base);
+      res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+      ASSERT(res >= 0);
+      res := HostFiles.Read(r.base.h, SYSTEM.ADR(x[0]), n);
+      ASSERT((res = 0) OR (res = n));
+      INC(r.pos, res);
+      r.eof := res < n;
+    END
+  END ReadBytes;
+
+  PROCEDURE Read*(VAR r: Rider; VAR ch: CHAR);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    ReopenFile(r.base);
+    res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+    ASSERT(res >= 0);
+    ch := 0X; res := HostFiles.Read(r.base.h, SYSTEM.ADR(ch), 1);
+    ASSERT((res = 0) OR (res = 1));
+    INC(r.pos, res);
+    r.eof := res < 1;
+  END Read;
+
+  PROCEDURE ReadInt*(VAR R: Rider; VAR x: INTEGER);
+    VAR x0, x1, x2, x3: BYTE;
+  BEGIN ReadByte(R, x0); ReadByte(R, x1); ReadByte(R, x2); ReadByte(R, x3);
+    x := ((x3 * 100H + x2) * 100H + x1) * 100H + x0
+  END ReadInt;
+
+  PROCEDURE ReadSet*(VAR R: Rider; VAR s: SET);
+  BEGIN ReadInt(R, SYSTEM.VAL(s, INTEGER))
+  END ReadSet;
+
+  PROCEDURE ReadReal*(VAR R: Rider; VAR x: REAL);
+  BEGIN ReadInt(R, SYSTEM.VAL(x, INTEGER))
+  END ReadReal;
+
+  PROCEDURE ReadString*(VAR R: Rider; VAR x: ARRAY OF CHAR);
+    VAR i: INTEGER; ch: CHAR;
+  BEGIN i := 0; Read(R, ch);
+    WHILE ch # 0X DO
+      IF i < LEN(x)-1 THEN x[i] := ch; INC(i) END ;
+      Read(R, ch)
+    END ;
+    x[i] := 0X
+  END ReadString;
+
+  PROCEDURE ReadNum*(VAR R: Rider; VAR x: INTEGER);
+    VAR n, y: INTEGER; b: BYTE;
+  BEGIN n := 32; y := 0; ReadByte(R, b);
+    WHILE b >= 80H DO y := ROR(y + b-80H, 7); DEC(n, 7); ReadByte(R, b) END ;
+    IF n <= 4 THEN x := ROR(y + b MOD 10H, 4) ELSE x := ASR(ROR(y + b, 7), n-7) END
+  END ReadNum;
+
+  PROCEDURE WriteByte*(VAR r: Rider; x: BYTE);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    ReopenFile(r.base);
+    res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+    ASSERT(res >= 0);
+    res := HostFiles.Write(r.base.h, SYSTEM.ADR(x), 1);
+    ASSERT((res = 0) OR (res = 1));
+    INC(r.pos, res);
+    r.eof := res < 1
+  END WriteByte;
+
+  PROCEDURE WriteBytes*(VAR r: Rider; x: ARRAY OF BYTE; n: INTEGER);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    IF n > 0 THEN
+      ReopenFile(r.base);
+      res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+      ASSERT(res >= 0);
+      res := HostFiles.Write(r.base.h, SYSTEM.ADR(x[0]), n);
+      ASSERT((res = 0) OR (res = n));
+      INC(r.pos, res);
+      r.eof := res < n
+    END
+  END WriteBytes;
+
+  PROCEDURE Write*(VAR r: Rider; ch: CHAR);
+    VAR res: INTEGER;
+  BEGIN
+    ASSERT(r.base # NIL);
+    ReopenFile(r.base);
+    res := HostFiles.Seek(r.base.h, r.pos, HostFiles.SEEK_BEG);
+    ASSERT(res >= 0);
+    res := HostFiles.Write(r.base.h, SYSTEM.ADR(ch), 1);
+    ASSERT((res = 0) OR (res = 1));
+    INC(r.pos, res);
+    r.eof := res < 1
+  END Write;
+
+  PROCEDURE WriteInt*(VAR R: Rider; x: INTEGER);
+  BEGIN WriteByte(R, x MOD 100H);
+    WriteByte(R, x DIV 100H MOD 100H);
+    WriteByte(R, x DIV 10000H MOD 100H);
+    WriteByte(R, x DIV 1000000H MOD 100H)
+  END WriteInt;
+
+  PROCEDURE WriteSet*(VAR R: Rider; s: SET);
+  BEGIN WriteInt(R, ORD(s))
+  END WriteSet;
+
+  PROCEDURE WriteReal*(VAR R: Rider; x: REAL);
+  BEGIN WriteInt(R, SYSTEM.VAL(x, INTEGER))
+  END WriteReal;
+
+  PROCEDURE WriteString*(VAR R: Rider; x: ARRAY OF CHAR);
+    VAR i: INTEGER; ch: CHAR;
+  BEGIN i := 0;
+    REPEAT ch := x[i]; Write(R, ch); INC(i) UNTIL ch = 0X
+  END WriteString;
+
+  PROCEDURE WriteNum*(VAR R: Rider; x: INTEGER);
+  BEGIN
+    WHILE (x < -40H) OR (x >= 40H) DO WriteByte(R, x MOD 80H + 80H); x := ASR(x, 7) END ;
+    WriteByte(R, x MOD 80H)
+  END WriteNum;
+
+(*
+  PROCEDURE Init*;
+  END Init;
+
+  PROCEDURE RestoreList*;
+  END RestoreList;
+*)
+
+  PROCEDURE Finalize*;
+    VAR f: File; ok: BOOLEAN;
+  BEGIN
+    f := root; root := NIL;
+    WHILE f # NIL DO
+      CloseFile(f);
+      IF f.temp[0] # 0X THEN
+        ok := HostFiles.Delete(f.temp); f.temp := ""; f.name := ""
+      END;
+      f := f.next
+    END;
+  END Finalize;
+
+BEGIN
+$IF (KOLIBRIOS)
+  invalid := NIL
+$END
+END Files.

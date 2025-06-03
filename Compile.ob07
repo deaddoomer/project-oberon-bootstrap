@@ -1,0 +1,30 @@
+MODULE Compile;
+
+  IMPORT API, Files, Texts, ORS, ORP
+$IF (KOLIBRIOS)
+    , ConsoleLib, Out
+$END
+  ;
+
+  VAR
+    T: Texts.Text;
+    exitCode: INTEGER;
+
+BEGIN
+$IF (KOLIBRIOS)
+  ConsoleLib.open(-1, -1, -1, -1, "OR386 Compiler (Bootstrap)");
+  Out.Open;
+$END
+
+  (*set error code on empty input*)
+  NEW(T); Texts.Open(T, ""); ORS.Init(T, 0); ORS.Mark("");
+
+  ORP.Compile;
+  IF ORS.errcnt = 0 THEN exitCode := 0 ELSE exitCode := 1 END;
+
+  Files.Finalize;
+$IF (KOLIBRIOS)
+  ConsoleLib.exit(exitCode = 0);
+$END
+  API.exit(exitCode)
+END Compile.

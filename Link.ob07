@@ -1,0 +1,31 @@
+MODULE LinkELF;
+
+  IMPORT API, Files
+$IF (LinkTargetELF)
+    , ORL := ORLELF
+$ELSIF (LinkTargetKEX)
+    , ORL := ORLKEX
+$END
+$IF (KOLIBRIOS)
+    , ConsoleLib, Out
+$END
+  ;
+
+  VAR
+    exitCode: INTEGER;
+
+BEGIN
+$IF (KOLIBRIOS)
+  ConsoleLib.open(-1, -1, -1, -1, "OR386 Linker (Bootstrap)");
+  Out.Open;
+$END
+
+  ORL.Link;
+  IF ORL.res = 0 THEN exitCode := 0 ELSE exitCode := 1 END;
+
+  Files.Finalize;
+$IF (KOLIBRIOS)
+  ConsoleLib.exit(exitCode = 0);
+$END
+  API.exit(exitCode)
+END LinkELF.

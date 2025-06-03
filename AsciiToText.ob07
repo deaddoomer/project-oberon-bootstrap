@@ -1,0 +1,76 @@
+MODULE AsciiToText;
+
+  IMPORT API, Args, Files, Texts, Out
+$IF (KOLIBRIOS)
+    , ConsoleLib
+$END
+  ;
+
+  VAR
+    T: Texts.Text;
+    W: Texts.Writer;
+    R: Files.Rider;
+    F: Files.File;
+    in, out: ARRAY 256 OF CHAR;
+    ch, prev: CHAR;
+    i, exitCode: INTEGER;
+
+BEGIN
+$IF (KOLIBRIOS)
+  ConsoleLib.open(-1, -1, -1, -1, "AsciiToText");
+  Out.Open;
+$END
+
+  IF (Args.argc > 1) & ((Args.argc-1) MOD 2 = 0) THEN
+    (*check empty names*)
+    i := 1; exitCode := 0;
+    REPEAT
+      Args.GetArg(i+0, in);
+      Args.GetArg(i+1, out);
+      IF (in[0] = 0X) OR (out[0] = 0X) THEN
+        Out.String("empty file name not allowed"); Out.Ln;
+        exitCode := 1
+      END;
+      INC(i, 2)
+    UNTIL (i >= Args.argc) OR (exitCode # 0);
+
+    (*convert all*)
+    i := 1;
+    WHILE (exitCode = 0) & (i < Args.argc - 1) DO
+      Args.GetArg(i+0, in);
+      Args.GetArg(i+1, out);
+      F := Files.Old(in);
+      IF F # NIL THEN
+        Out.String("convert "); Out.String(in); Out.String(" -> "); Out.String(out); Out.Ln;
+        NEW(T); Texts.Open(T, ""); Texts.OpenWriter(W);
+
+        (*read ascii and convert end line*)
+        Files.Set(R, F, 0); prev := 0X;
+        Files.Read(R, ch);
+        WHILE ~R.eof DO
+          IF (prev = 0DX) & (ch = 0AX) THEN (*skip lf*)
+          ELSIF (ch = 0DX) OR (ch = 0AX) THEN Texts.WriteLn(W)
+          ELSE Texts.Write(W, ch)
+          END;
+          prev := ch;
+          Files.Read(R, ch);
+        END;
+        Files.Set(R, F, 0);
+        Files.Close(F);
+
+        (*save text*)
+        Texts.Append(T, W.buf); Texts.Close(T, out);
+      ELSE Out.String("failed to open "); Out.String(in); Out.Ln; exitCode := 1
+      END;
+
+      INC(i, 2)
+    END
+  ELSE Out.String("Ascii2Text {input output}"); Out.Ln; exitCode := 1
+  END;
+
+  Files.Finalize;
+$IF (KOLIBRIOS)
+  ConsoleLib.exit(exitCode = 0);
+$END
+  API.exit(exitCode)
+END AsciiToText.

@@ -1,0 +1,25 @@
+MODULE Fonts; (*stub*)
+
+  TYPE
+    Font* = POINTER TO FontDesc;
+    FontDesc* = RECORD
+      next: Font;
+      name*: ARRAY 32 OF CHAR
+    END;
+
+  VAR
+    Default*, root*: Font;
+
+  PROCEDURE This*(name: ARRAY OF CHAR): Font;
+    VAR f: Font;
+  BEGIN
+    f := root;
+    WHILE (f # NIL) & (f.name # name) DO f := f.next END;
+    IF f = NIL THEN NEW(f); f.next := root; f.name := name; root := f END;
+    RETURN f
+  END This;
+
+BEGIN
+  NEW(Default); Default.name := "Oberon10.Scn.Fnt";
+  root := Default
+END Fonts.
