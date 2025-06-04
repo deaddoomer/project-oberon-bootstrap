@@ -283,7 +283,8 @@ $END
   END ReadInt;
 
   PROCEDURE ReadSet*(VAR R: Rider; VAR s: SET);
-  BEGIN ReadInt(R, SYSTEM.VAL(s, INTEGER))
+    VAR x: INTEGER;
+  BEGIN ReadInt(R, x); s := BITS(x)
   END ReadSet;
 
   PROCEDURE ReadReal*(VAR R: Rider; VAR x: REAL);
