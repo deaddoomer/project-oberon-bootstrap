@@ -1,10 +1,6 @@
 MODULE Reals;
 
-$IF (CPU_X86)
-  IMPORT SYSTEM, Math := Math_x86;
-$ELSE
   IMPORT SYSTEM, Math;
-$END
 
   CONST
     max = 8388608; (*2^23*)
@@ -22,11 +18,7 @@ $END
         UNPK(x, e); ASSERT((x >= 1.0) & (x < 2.0));
         INC(e, 127); (*exponent*)
         IF (e < 0) OR (e > 255) THEN e := 255 END; (*inf*)
-$IF (CPU_X86)
-        m := FLOOR(Math.round(ABS(x) * FLT(max) - FLT(max))); (*mantissa*)
-$ELSE
         m := FLOOR(ABS(x) * FLT(max) - FLT(max) + 0.5); (*mantissa*)
-$END
         y := ORD(s + BITS(LSL(e, 23)) + BITS(m));
       END;
     ELSE
