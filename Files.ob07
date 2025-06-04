@@ -144,7 +144,8 @@ $END
     h := HostFiles.Create(temp);
     IF h # invalid THEN
       NEW(f); f.h := h; f.registered := FALSE; f.temp := temp; f.name := name;
-      f.next := root; root := f
+      f.next := root; root := f;
+      CloseFile(f)
     END;
     RETURN f
   END New;
