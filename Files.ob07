@@ -1,6 +1,6 @@
 MODULE Files;
 
-  IMPORT SYSTEM, HostFiles := File;
+  IMPORT SYSTEM, Reals, HostFiles := File;
 
   CONST
     FullLength = 256;
@@ -287,7 +287,8 @@ $END
   END ReadSet;
 
   PROCEDURE ReadReal*(VAR R: Rider; VAR x: REAL);
-  BEGIN ReadInt(R, SYSTEM.VAL(x, INTEGER))
+    VAR y: INTEGER;
+  BEGIN ReadInt(R, y); x := Reals.Unpack(y)
   END ReadReal;
 
   PROCEDURE ReadString*(VAR R: Rider; VAR x: ARRAY OF CHAR);
@@ -360,7 +361,7 @@ $END
   END WriteSet;
 
   PROCEDURE WriteReal*(VAR R: Rider; x: REAL);
-  BEGIN WriteInt(R, SYSTEM.VAL(x, INTEGER))
+  BEGIN WriteInt(R, Reals.Pack(x))
   END WriteReal;
 
   PROCEDURE WriteString*(VAR R: Rider; x: ARRAY OF CHAR);

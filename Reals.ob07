@@ -1,0 +1,55 @@
+MODULE Reals;
+
+$IF (CPU_X86)
+  IMPORT SYSTEM, Math := Math_x86;
+$ELSE
+  IMPORT SYSTEM, Math;
+$END
+
+  CONST
+    max = 8388608; (*2^23*)
+
+  PROCEDURE Pack* (x: REAL): INTEGER; (** Pack REAL into IEEE754-32 **)
+    VAR y, e, m: INTEGER; s: SET;
+  BEGIN
+    IF SYSTEM.SIZE(REAL) = 4 THEN
+      y := SYSTEM.VAL(x, INTEGER)
+    ELSIF SYSTEM.SIZE(REAL) = 8 THEN
+      IF x = 0.0 THEN
+        IF Math.sgn(x) < 0 THEN y := 80000000H ELSE y := 0 END
+      ELSE
+        IF Math.sgn(x) < 0 THEN s := {31} ELSE s := {} END;
+        UNPK(x, e); ASSERT((x >= 1.0) & (x < 2.0));
+        INC(e, 127); (*exponent*)
+        IF (e < 0) OR (e > 255) THEN e := 255 END; (*inf*)
+$IF (CPU_X86)
+        m := FLOOR(Math.round(ABS(x) * FLT(max) - FLT(max))); (*mantissa*)
+$ELSE
+        m := FLOOR(ABS(x) * FLT(max) - FLT(max) + 0.5); (*mantissa*)
+$END
+        y := ORD(s + BITS(LSL(e, 23)) + BITS(m));
+      END;
+    ELSE
+      ASSERT(FALSE)
+    END;
+    RETURN y
+  END Pack;
+
+  PROCEDURE Unpack* (x: INTEGER): REAL; (** Unpack IEEE754-32 into REAL **)
+    VAR y: REAL; e, m: INTEGER;
+  BEGIN
+    IF SYSTEM.SIZE(REAL) = 4 THEN
+      y := SYSTEM.VAL(x, REAL)
+    ELSIF SYSTEM.SIZE(REAL) = 8 THEN
+      IF x < 0 THEN y := -1.0 ELSE y := 1.0 END;
+      e := ASR(x, 23) MOD 256 - 127;
+      m := x MOD max;
+      y := y + FLT(m) / FLT(max);
+      PACK(y, e)
+    ELSE
+      ASSERT(FALSE)
+    END;
+    RETURN y
+  END Unpack;
+
+END Reals.

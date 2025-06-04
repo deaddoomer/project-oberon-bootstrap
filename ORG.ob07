@@ -1,5 +1,5 @@
 MODULE ORG; (* SVP, 25.7.2024  Oberon compiler; code generator for Intel 386/387 *)
-  IMPORT SYSTEM, Files, ORS, ORB;
+  IMPORT Reals, Files, ORS, ORB;
   (*Code generator for Oberon compiler for Intel 386/387 processor.
      Procedural interface to Parser OSAP; result in array "code".
      Procedure Close writes code-files*)
@@ -842,7 +842,7 @@ MODULE ORG; (* SVP, 25.7.2024  Oberon compiler; code generator for Intel 386/387
   END MakeConstItem;
 
   PROCEDURE MakeRealItem*(VAR x: Item; val: REAL);
-  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := SYSTEM.VAL(val, LONGINT)
+  BEGIN x.mode := ORB.Const; x.type := ORB.realType; x.a := Reals.Pack(val)
   END MakeRealItem;
 
   PROCEDURE MakeStringItem*(VAR x: Item; len: LONGINT); (*copies string from ORS-buffer to ORG-string array*)
@@ -1985,9 +1985,8 @@ MODULE ORG; (* SVP, 25.7.2024  Oberon compiler; code generator for Intel 386/387
   END Floor;
 
   PROCEDURE Float*(VAR x: Item);
-    VAR r: REAL;
   BEGIN
-    IF x.mode = ORB.Const THEN r := FLT(x.a); x.a := SYSTEM.VAL(r, INTEGER)
+    IF x.mode = ORB.Const THEN x.a := Reals.Pack(FLT(x.a))
     ELSE loadFloat(x)
     END
   END Float;
