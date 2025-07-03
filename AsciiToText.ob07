@@ -1,6 +1,6 @@
 MODULE AsciiToText;
 
-  IMPORT API, Args, Files, Texts, Out
+  IMPORT Trap, API, Args, Files, Texts, Out
 $IF (KOLIBRIOS)
     , ConsoleLib
 $END

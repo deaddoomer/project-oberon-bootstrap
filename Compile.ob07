@@ -1,6 +1,6 @@
 MODULE Compile;
 
-  IMPORT API, Files, Texts, ORS, ORP
+  IMPORT Trap, API, Files, Texts, ORS, ORP
 $IF (KOLIBRIOS)
     , ConsoleLib, Out
 $END

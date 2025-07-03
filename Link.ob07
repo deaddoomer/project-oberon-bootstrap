@@ -1,6 +1,6 @@
 MODULE LinkELF;
 
-  IMPORT API, Files
+  IMPORT Trap, API, Files
 $IF (LinkTargetELF)
     , ORL := ORLELF
 $ELSIF (LinkTargetKEX)

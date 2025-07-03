@@ -1,0 +1,59 @@
+MODULE Trap;
+
+  IMPORT SYSTEM, API;
+
+  VAR
+    caption: ARRAY 5 OF CHAR;
+
+  PROCEDURE PCharToStr (p: INTEGER; VAR s: ARRAY OF CHAR);
+    VAR c: CHAR; i: INTEGER;
+  BEGIN
+    i := 0; REPEAT SYSTEM.GET(p, c); s[i] := c; INC(p); INC(i) UNTIL c = 0X
+  END PCharToStr;
+
+  PROCEDURE IntToStr (x: INTEGER; VAR s: ARRAY OF CHAR);
+    VAR i, a: INTEGER;
+  BEGIN i := 0; a := x;
+    REPEAT INC(i); a := a DIV 10 UNTIL a = 0; s[i] := 0X;
+    REPEAT DEC(i); s[i] := CHR(x MOD 10 + ORD("0")); x := x DIV 10 UNTIL x = 0
+  END IntToStr;
+
+  PROCEDURE append (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
+    VAR n1, n2: INTEGER;
+  BEGIN
+    n1 := LENGTH(s1);
+    n2 := LENGTH(s2);
+
+    ASSERT(n1 + n2 < LEN(s1));
+
+    SYSTEM.MOVE(SYSTEM.ADR(s2[0]), SYSTEM.ADR(s1[n1]), n2);
+    s1[n1 + n2] := 0X
+  END append;
+
+  PROCEDURE TrapHandler (modnum, modname, line, error: INTEGER);
+    VAR s, temp: ARRAY 256 OF CHAR;
+  BEGIN
+    CASE error OF
+    | 1: s := "assertion failure"
+    | 2: s := "NIL dereference"
+    | 3: s := "bad divisor"
+    | 4: s := "NIL procedure call"
+    | 5: s := "type guard error"
+    | 6: s := "index out of range"
+    | 7: s := "invalid CASE"
+    | 8: s := "array assignment error"
+    | 9: s := "CHR out of range"
+    |10: s := "WCHR out of range"
+    |11: s := "BYTE out of range"
+    ELSE IntToStr(error, s)
+    END;
+
+    append(s, API.eol + "module: "); PCharToStr(modname, temp); append(s, temp);
+    append(s, API.eol + "line: "); IntToStr(line, temp); append(s, temp);
+    API.DebugMsg(SYSTEM.ADR(s[0]), SYSTEM.ADR(caption));
+
+    API.exit_thread(1)
+  END TrapHandler;
+
+BEGIN caption := "TRAP"; API.SetTrap(TrapHandler)
+END Trap.
