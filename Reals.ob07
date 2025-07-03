@@ -9,7 +9,7 @@ MODULE Reals;
     VAR y, e, m: INTEGER; s: SET;
   BEGIN
     IF SYSTEM.SIZE(REAL) = 4 THEN
-      y := SYSTEM.VAL(x, INTEGER)
+      y := SYSTEM.VAL(INTEGER, x)
     ELSIF SYSTEM.SIZE(REAL) = 8 THEN
       IF x = 0.0 THEN
         IF Math.sgn(x) < 0 THEN y := 80000000H ELSE y := 0 END
@@ -31,7 +31,7 @@ MODULE Reals;
     VAR y: REAL; e, m: INTEGER;
   BEGIN
     IF SYSTEM.SIZE(REAL) = 4 THEN
-      y := SYSTEM.VAL(x, REAL)
+      y := SYSTEM.VAL(REAL, x)
     ELSIF SYSTEM.SIZE(REAL) = 8 THEN
       IF x < 0 THEN y := -1.0 ELSE y := 1.0 END;
       e := ASR(x, 23) MOD 256 - 127;
