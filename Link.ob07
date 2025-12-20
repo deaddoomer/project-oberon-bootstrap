@@ -3,6 +3,8 @@ MODULE LinkELF;
   IMPORT Trap, API, Files
 $IF (LinkTargetELF)
     , ORL := ORLELF
+$ELSIF (LinkTargetELFDYN)
+    , ORL := ORLELFDYN
 $ELSIF (LinkTargetKEX)
     , ORL := ORLKEX
 $END

@@ -23,8 +23,8 @@ REM ============================================================================
 REM  Convert sources and texts
 REM ============================================================================
 
-md linux
-cd linux
+md linux-sdl
+cd linux-sdl
 
 ..\AsciiToText.exe ^
   ..\project-oberon\Blinkers.Mod.txt           Blinkers.Mod ^
@@ -63,7 +63,7 @@ cd linux
   ..\project-oberon\HOST.Display.Mod.txt       Display.Mod ^
   ..\project-oberon\LINUX386.FileDir.Mod.txt   FileDir.Mod ^
   ..\project-oberon\LINUX386.Files.Mod.txt     Files.Mod ^
-  ..\project-oberon\LINUX386FB.Host.Mod.txt    Host.Mod ^
+  ..\project-oberon\LINUX386SDL.Host.Mod.txt   Host.Mod ^
   ..\project-oberon\HOST.Input.Mod.txt         Input.Mod ^
   ..\project-oberon\LINUX386.Kernel.Mod.txt    Kernel.Mod ^
   ..\project-oberon\LINUX386.Modules.Mod.txt   Modules.Mod ^
@@ -119,9 +119,4 @@ if %errorlevel% neq 0 exit /b %errorlevel%
 ..\LinkELFDYN.exe Modules
 if %errorlevel% neq 0 exit /b %errorlevel%
 rename Modules.elf oberon
-if %errorlevel% neq 0 exit /b %errorlevel%
-
-..\LinkELF.exe Modules
-if %errorlevel% neq 0 exit /b %errorlevel%
-rename Modules.elf oberon_static
 if %errorlevel% neq 0 exit /b %errorlevel%

@@ -1,11 +1,21 @@
-MODULE ORLELF;
+MODULE ORLELFDYN;
   IMPORT Files, Texts, Oberon;
 
   CONST
     versionkey = 0AX; MT = 3; DescSize = 80;
 
+    Interpreter = "/lib/ld-linux.so.2"; InterpreterSize = 19;
+    LibDL = "libdl.so.2"; LibDLSize = 11;
+
     ImageBase = 100000H;
-    bootinfo = ImageBase + 52 + 32;
+    phdr = ImageBase + 52;
+    reltab = phdr + 32*3;
+    interp = reltab + 8*4;
+    strtab = interp + InterpreterSize;
+    dyntab = (strtab + 30 + LibDLSize + 3) DIV 4 * 4;
+    hashtab = dyntab + 8*11;
+    symtab = hashtab + 4*8;
+    bootinfo = symtab + 16*5;
     entry = bootinfo + 4*8;
     org = (entry + 18 + 15) DIV 16 * 16;
 
@@ -275,7 +285,7 @@ MODULE ORLELF;
     Files.WriteInt(R, 0); (* flags *)
     WriteShort(R, 52); (* elf header size *)
     WriteShort(R, 32); (* program header entry size *)
-    WriteShort(R, 1); (* program header entry count *)
+    WriteShort(R, 3); (* program header entry count *)
     WriteShort(R, 0); (* section entry size *)
     WriteShort(R, 0); (* section entry count *)
     WriteShort(R, 0); (* section id for name table *)
@@ -289,6 +299,84 @@ MODULE ORLELF;
     Files.WriteInt(R, limit - ImageBase); (* image size in memory *)
     Files.WriteInt(R, 7); (* flags: rwx *)
     Files.WriteInt(R, 4096); (* align *)
+    (**)
+    Files.WriteInt(R, 2); (* dynamic *)
+    Files.WriteInt(R, dyntab - ImageBase); (* file offset *)
+    Files.WriteInt(R, dyntab); (* virtual image base *)
+    Files.WriteInt(R, dyntab); (* physical image base *)
+    Files.WriteInt(R, entry - dyntab); (* dyntab size in file *)
+    Files.WriteInt(R, entry - dyntab); (* dyntab size in memory *)
+    Files.WriteInt(R, 7); (* flags: rwx *)
+    Files.WriteInt(R, 4); (* align *)
+    (**)
+    Files.WriteInt(R, 3); (* interp *)
+    Files.WriteInt(R, interp - ImageBase); (* file offset *)
+    Files.WriteInt(R, interp); (* virtual image base *)
+    Files.WriteInt(R, interp); (* physical image base *)
+    Files.WriteInt(R, InterpreterSize); (* dyntab size in file *)
+    Files.WriteInt(R, InterpreterSize); (* dyntab size in memory *)
+    Files.WriteInt(R, 7); (* flags: rwx *)
+    Files.WriteInt(R, 1); (* align *)
+    (* relocation table *)
+    ASSERT(Files.Pos(R) = reltab - ImageBase);
+    Files.WriteInt(R, bootinfo+0);  Files.WriteInt(R, 3 * 256 + 1); (* dlopen,  fixup R_386_32 *)
+    Files.WriteInt(R, bootinfo+4);  Files.WriteInt(R, 4 * 256 + 1); (* dlsym,   fixup R_386_32 *)
+    Files.WriteInt(R, bootinfo+8);  Files.WriteInt(R, 2 * 256 + 1); (* dlerror, fixup R_386_32 *)
+    Files.WriteInt(R, bootinfo+12); Files.WriteInt(R, 1 * 256 + 1); (* dlclose, fixup R_386_32 *)
+    (* interp string *)
+    ASSERT(Files.Pos(R) = interp - ImageBase);
+    Files.WriteString(R, Interpreter);
+    ASSERT(Files.Pos(R) = strtab - ImageBase);
+    Files.WriteString(R, "");
+    Files.WriteString(R, "dlclose");
+    Files.WriteString(R, "dlerror");
+    Files.WriteString(R, "dlopen");
+    Files.WriteString(R, "dlsym");
+    Files.WriteString(R, LibDL);
+    i := 0; len := dyntab - ImageBase - Files.Pos(R);
+    WHILE i < len DO Files.WriteByte(R, 00H); INC(i) END; (*pad*)
+    ASSERT(Files.Pos(R) = dyntab - ImageBase);
+    Files.WriteInt(R, 18); Files.WriteInt(R, interp - reltab); (* DT_RELSZ *)
+    Files.WriteInt(R, 19); Files.WriteInt(R, 8); (* DT_RELENT *)
+    Files.WriteInt(R, 17); Files.WriteInt(R, reltab); (* DT_REL *)
+    Files.WriteInt(R, 10); Files.WriteInt(R, dyntab - strtab); (* DT_STRSZ *)
+    Files.WriteInt(R, 5); Files.WriteInt(R, strtab); (* DT_STRTAB *)
+    Files.WriteInt(R, 11); Files.WriteInt(R, 16); (* DT_SYMENT *)
+    Files.WriteInt(R, 6); Files.WriteInt(R, symtab); (* DT_SYMTAB *)
+    Files.WriteInt(R, 4); Files.WriteInt(R, hashtab); (* DT_HSAH *)
+    Files.WriteInt(R, 1); Files.WriteInt(R, 30); (* DT_NEEDED *)
+    Files.WriteInt(R, 24); Files.WriteInt(R, 0); (* DT_BIND_NOW (optional) *)
+    Files.WriteInt(R, 0); Files.WriteInt(R, 0); (* DT_NULL *)
+    ASSERT(Files.Pos(R) = hashtab - ImageBase);
+    Files.WriteInt(R, 1); (* noOfBuckets *)
+    Files.WriteInt(R, 5); (* noOfSymbols *)
+    Files.WriteInt(R, 1); (* bucket 0 *)
+    Files.WriteInt(R, 1); (* chain of bucket 0 *)
+    Files.WriteInt(R, 2);
+    Files.WriteInt(R, 3);
+    Files.WriteInt(R, 4);
+    Files.WriteInt(R, 0);
+    ASSERT(Files.Pos(R) = symtab - ImageBase);
+    Files.WriteInt(R, 0); (**)
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 1); (*dlclose*)
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 18);
+    Files.WriteInt(R, 9); (*dlerror*)
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 18);
+    Files.WriteInt(R, 17); (*dlopen*)
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 18);
+    Files.WriteInt(R, 24); (*dlsym*)
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 0);
+    Files.WriteInt(R, 18);
     (* boot info *)
     ASSERT(Files.Pos(R) = bootinfo - ImageBase);
     Files.WriteInt(R, 0); (* dlopen *)
@@ -366,5 +454,5 @@ MODULE ORLELF;
 
 BEGIN Texts.OpenWriter(W); Texts.WriteString(W, "OR386 Linker  05.12.2025");
   Texts.WriteLn(W); Texts.Append(Oberon.Log, W.buf)
-END ORLELF.
+END ORLELFDYN.
 

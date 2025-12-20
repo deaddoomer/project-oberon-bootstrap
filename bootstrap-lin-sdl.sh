@@ -15,12 +15,13 @@ fi
 "$OBERON_EXE" Link.ob07 linux32exe -out LinkELFDYN.elf -upper -nochk bc -stk 1 -def LinkTargetELFDYN
 chmod a+x AsciiToText.elf Compile.elf LinkELF.elf LinkELFDYN.elf
 
+
 # ==============================================================================
 #  Convert sources and texts
 # ==============================================================================
 
-mkdir -p linux
-cd linux
+mkdir -p linux-sdl
+cd linux-sdl
 
 ../AsciiToText.elf \
   ../project-oberon/Blinkers.Mod.txt           Blinkers.Mod \
@@ -59,7 +60,7 @@ cd linux
   ../project-oberon/HOST.Display.Mod.txt       Display.Mod \
   ../project-oberon/LINUX386.FileDir.Mod.txt   FileDir.Mod \
   ../project-oberon/LINUX386.Files.Mod.txt     Files.Mod \
-  ../project-oberon/LINUX386FB.Host.Mod.txt    Host.Mod \
+  ../project-oberon/LINUX386SDL.Host.Mod.txt   Host.Mod \
   ../project-oberon/HOST.Input.Mod.txt         Input.Mod \
   ../project-oberon/LINUX386.Kernel.Mod.txt    Kernel.Mod \
   ../project-oberon/LINUX386.Modules.Mod.txt   Modules.Mod \
@@ -100,7 +101,3 @@ cp ../project-oberon/TTL1.Lib              TTL1.Lib
 ../LinkELFDYN.elf Modules
 chmod a+x Modules.elf
 mv Modules.elf oberon
-
-../LinkELF.elf Modules
-chmod a+x Modules.elf
-mv Modules.elf oberon_static

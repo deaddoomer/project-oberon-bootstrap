@@ -4,11 +4,14 @@
 # Build tools
 # ==============================================================================
 
-/kolibrios/develop/oberon07/Compiler.kex AsciiToText.ob07 kosexe -out AsciiToText.kex -upper -nochk bc -stk 1
+#/kolibrios/develop/oberon07/Compiler.kex AsciiToText.ob07 kosexe -out AsciiToText.kex -upper -nochk bc -stk 1
+oberon-07-compiler/Compiler.kex AsciiToText.ob07 kosexe -out AsciiToText.kex -upper -nochk bc -stk 1
 waitfor
-/kolibrios/develop/oberon07/Compiler.kex Compile.ob07 kosexe -out Compile.kex -upper -nochk bc -stk 1
+#/kolibrios/develop/oberon07/Compiler.kex Compile.ob07 kosexe -out Compile.kex -upper -nochk bc -stk 1
+oberon-07-compiler/Compiler.kex Compile.ob07 kosexe -out Compile.kex -upper -nochk bc -stk 1
 waitfor
-/kolibrios/develop/oberon07/Compiler.kex Link.ob07 kosexe -out LinkKEX.kex -upper -nochk bc -stk 1 -def LinkTargetKEX
+#/kolibrios/develop/oberon07/Compiler.kex Link.ob07 kosexe -out LinkKEX.kex -upper -nochk bc -stk 1 -def LinkTargetKEX
+oberon-07-compiler/Compiler.kex Link.ob07 kosexe -out LinkKEX.kex -upper -nochk bc -stk 1 -def LinkTargetKEX
 waitfor
 
 # ==============================================================================
@@ -30,11 +33,11 @@ waitfor
 waitfor
 ../AsciiToText.kex ../project-oberon/SmallPrograms.Mod.txt SmallPrograms.Mod ../project-oberon/Stars.Mod.txt Stars.Mod ../project-oberon/TextFrames.Mod.txt TextFrames.Mod ../project-oberon/Texts.Mod.txt Texts.Mod ../project-oberon/Tools.Mod.txt Tools.Mod
 waitfor
-../AsciiToText.kex ../project-oberon/Viewers.Mod.txt Viewers.Mod ../project-oberon/HOST.Build.Tool.txt Build.Tool ../project-oberon/HOST386.System.Mod.txt System.Mod ../project-oberon/386.Math.Mod.txt Math.Mod ../project-oberon/386.Oberon.Mod.txt Oberon.Mod
+../AsciiToText.kex ../project-oberon/Viewers.Mod.txt Viewers.Mod ../project-oberon/HOST.Build.Tool.txt Build.Tool ../project-oberon/HOST386.System.Mod.txt System.Mod ../project-oberon/386.Math.Mod.txt Math.Mod ../project-oberon/HOST386.Oberon.Mod.txt Oberon.Mod
 waitfor
-../AsciiToText.kex ../project-oberon/386.ORG.Mod.txt ORG.Mod ../project-oberon/386.ORP.Mod.txt ORP.Mod ../project-oberon/386.ORTool.Mod.txt ORTool.Mod ../project-oberon/KOS.Display.Mod.txt Display.Mod ../project-oberon/KOS.FileDir.Mod.txt FileDir.Mod
+../AsciiToText.kex ../project-oberon/386.ORG.Mod.txt ORG.Mod ../project-oberon/386.ORP.Mod.txt ORP.Mod ../project-oberon/386.ORTool.Mod.txt ORTool.Mod ../project-oberon/HOST.Display.Mod.txt Display.Mod ../project-oberon/KOS.FileDir.Mod.txt FileDir.Mod
 waitfor
-../AsciiToText.kex ../project-oberon/KOS.Files.Mod.txt Files.Mod ../project-oberon/KOS.Host.Mod.txt Host.Mod ../project-oberon/KOS.Input.Mod.txt Input.Mod ../project-oberon/KOS.Kernel.Mod.txt Kernel.Mod ../project-oberon/KOS.Modules.Mod.txt Modules.Mod
+../AsciiToText.kex ../project-oberon/KOS.Files.Mod.txt Files.Mod ../project-oberon/KOS.Host.Mod.txt Host.Mod ../project-oberon/HOST.Input.Mod.txt Input.Mod ../project-oberon/KOS.Kernel.Mod.txt Kernel.Mod ../project-oberon/KOS.Modules.Mod.txt Modules.Mod
 waitfor
 ../AsciiToText.kex ../project-oberon/KOS.ORL.Mod.txt ORL.Mod ../project-oberon/KOS.System.Tool.txt System.Tool
 waitfor

@@ -53,15 +53,15 @@ cd kolibri
   ..\project-oberon\HOST.Build.Tool.txt    Build.Tool ^
   ..\project-oberon\HOST386.System.Mod.txt System.Mod ^
   ..\project-oberon\386.Math.Mod.txt       Math.Mod ^
-  ..\project-oberon\386.Oberon.Mod.txt     Oberon.Mod ^
+  ..\project-oberon\HOST386.Oberon.Mod.txt Oberon.Mod ^
   ..\project-oberon\386.ORG.Mod.txt        ORG.Mod ^
   ..\project-oberon\386.ORP.Mod.txt        ORP.Mod ^
   ..\project-oberon\386.ORTool.Mod.txt     ORTool.Mod ^
-  ..\project-oberon\KOS.Display.Mod.txt    Display.Mod ^
+  ..\project-oberon\HOST.Display.Mod.txt   Display.Mod ^
   ..\project-oberon\KOS.FileDir.Mod.txt    FileDir.Mod ^
   ..\project-oberon\KOS.Files.Mod.txt      Files.Mod ^
   ..\project-oberon\KOS.Host.Mod.txt       Host.Mod ^
-  ..\project-oberon\KOS.Input.Mod.txt      Input.Mod ^
+  ..\project-oberon\HOST.Input.Mod.txt     Input.Mod ^
   ..\project-oberon\KOS.Kernel.Mod.txt     Kernel.Mod ^
   ..\project-oberon\KOS.Modules.Mod.txt    Modules.Mod ^
   ..\project-oberon\KOS.ORL.Mod.txt        ORL.Mod ^
